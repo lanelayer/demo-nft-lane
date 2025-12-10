@@ -47,89 +47,6 @@ async def health(request):
     )
 
 
-async def mint_nft(request):
-    """Mint a new NFT"""
-    try:
-        data = await request.json()
-        token_id = data.get("token_id")
-        metadata = data.get("metadata", {})
-        owner = data.get("owner", "unknown")
-
-        # If no token_id provided, auto-generate one
-        if not token_id:
-            global next_token_id
-            token_id = str(next_token_id)
-            next_token_id += 1
-        else:
-            token_id = str(token_id)
-
-        # Check if token already exists
-        if token_id in nft_store:
-            return web.json_response(
-                {"status": "error", "message": f"Token ID {token_id} already exists"},
-                status=400,
-                headers=cors_headers(),
-            )
-
-        # Create NFT
-        nft_store[token_id] = {
-            "owner": owner,
-            "metadata": metadata,
-            "minted_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-        logger.info(f"Minted NFT: token_id={token_id}, owner={owner}")
-
-        return web.json_response(
-            {
-                "status": "ok",
-                "message": "NFT minted successfully",
-                "token_id": token_id,
-                "nft": nft_store[token_id],
-            },
-            headers=cors_headers(),
-        )
-    except Exception as e:
-        logger.exception("Error minting NFT")
-        return web.json_response(
-            {"status": "error", "message": str(e)}, status=500, headers=cors_headers()
-        )
-
-
-async def get_nft(request):
-    """Get a specific NFT by token ID"""
-    token_id = request.match_info.get("token_id")
-    if not token_id:
-        return web.json_response(
-            {"status": "error", "message": "Token ID required"},
-            status=400,
-            headers=cors_headers(),
-        )
-
-    if token_id not in nft_store:
-        return web.json_response(
-            {"status": "error", "message": f"NFT {token_id} not found"},
-            status=404,
-            headers=cors_headers(),
-        )
-
-    return web.json_response(
-        {"status": "ok", "token_id": token_id, "nft": nft_store[token_id]},
-        headers=cors_headers(),
-    )
-
-
-async def list_nfts(request):
-    """List all NFTs"""
-    nfts = []
-    for token_id, nft_data in nft_store.items():
-        nfts.append({"token_id": token_id, **nft_data})
-
-    return web.json_response(
-        {"status": "ok", "count": len(nfts), "nfts": nfts}, headers=cors_headers()
-    )
-
-
 async def submit_handler(request):
     """
     Handle raw data submissions from core-lane.
@@ -220,9 +137,6 @@ app = web.Application()
 
 # API routes
 app.router.add_get("/health", health)
-app.router.add_post("/mint", mint_nft)
-app.router.add_get("/nfts", list_nfts)
-app.router.add_get("/nft/{token_id}", get_nft)
 app.router.add_post("/submit", submit_handler)
 
 # CORS preflight
