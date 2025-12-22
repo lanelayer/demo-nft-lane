@@ -47,7 +47,7 @@ format_log() {
   if echo "$line" | grep -q "Transaction forwarded\|forwarded to upstream"; then
     echo -e "${CYAN}${prefix}${NC} $line"
   elif echo "$line" | grep -q "processing.*transactions"; then
-    tx_count=$(echo "$line" | grep -oP '\(\K[0-9]+(?= transactions)' || echo "0")
+    tx_count=$(echo "$line" | sed -n 's/.*(\([0-9]*\) transactions).*/\1/p' || echo "0")
     if [ "$tx_count" != "0" ]; then
       echo -e "${YELLOW}${prefix}${NC} $line"
     fi
